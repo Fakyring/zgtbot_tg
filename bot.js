@@ -15,7 +15,7 @@ require('./src/handlers/settings')(bot, userStates);
 require('./src/handlers/games')(bot, userStates);
 require('./src/handlers/library')(bot);
 
-bot.launch();
+bot.launch({ dropPendingUpdates: true })
 console.log('✅ Bot started successfully');
 
 // Graceful stop
