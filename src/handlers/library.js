@@ -15,8 +15,14 @@ const deleteCache = {};  // { chatId: { games: [] } } - отдельный кэ�
 // ==================================================================
 async function showLibrary(ctx, page = 1, isPagination = false) {
     const chatId = ctx.chat.id;
+    const userId = ctx.from.id;
+    const username = ctx.from.first_name || ctx.from.username || 'Unknown';
     const settings = getChatSettings(chatId);
-    if (!settings?.scriptUrl) return refreshDashboard(ctx, '⚠️ Бот не настроен.', { ...getMainMenu() });
+
+    if (!settings?.scriptUrl) {
+        console.log(`[LOG] User ${userId} (${username}) attempted to view library but bot not configured.`);
+        return refreshDashboard(ctx, '⚠️ Бот не настроен.', { ...getMainMenu() });
+    }
 
     // Если первый вход - грузим данные
     if (!isPagination) {
@@ -26,9 +32,14 @@ async function showLibrary(ctx, page = 1, isPagination = false) {
             const games = data.games || [];
             const users = data.users || [];
 
-            if (games.length === 0) return refreshDashboard(ctx, '📭 Библиотека пуста.', { ...getMainMenu() });
+            console.log(`[LOG] User ${userId} (${username}) fetched game data: ${games.length} games and ${users.length} users.`);
 
-            // --- Проверка владельцев (упрощенно для экономии места, логика та же) ---
+            if (games.length === 0) {
+                console.log(`[LOG] User ${userId} (${username}) found an empty library.`);
+                return refreshDashboard(ctx, '📭 Библиотека пуста.', { ...getMainMenu() });
+            }
+
+            // --- Проверка владельцев ---
             const userLibraries = {};
             await Promise.allSettled(users.map(async (u) => {
                 if (u.steamId) userLibraries[u.name] = await getUserLibrary(u.steamId);
@@ -38,9 +49,11 @@ async function showLibrary(ctx, page = 1, isPagination = false) {
             for (const g of games) {
                 const appMatch = g.url.match(/\/app\/(\d+)/);
                 if (!appMatch) continue;
+                
                 const appId = parseInt(appMatch[1]);
-                let currentOwners = g.owners && g.owners !== '-' ? g.owners.split(',').map(s=>s.trim()) : [];
+                let currentOwners = g.owners && g.owners !== '-' ? g.owners.split(',').map(s => s.trim()) : [];
                 let changed = false;
+
                 for (const [uName, uLib] of Object.entries(userLibraries)) {
                     if (uLib && uLib.includes(appId) && !currentOwners.includes(uName)) {
                         currentOwners.push(uName); changed = true;
@@ -52,6 +65,7 @@ async function showLibrary(ctx, page = 1, isPagination = false) {
                 }
             }
             if (updatesForTable.length > 0) {
+                console.log(`[LOG] User ${userId} (${username}) updated owners for games:`, updatesForTable);
                 axios.post(settings.scriptUrl, { action: 'update_owners_batch', updates: updatesForTable })
                     .catch(e => console.error(e));
             }
@@ -59,12 +73,16 @@ async function showLibrary(ctx, page = 1, isPagination = false) {
 
             libraryCache[chatId] = { games, users };
         } catch (e) {
+            console.error(`[LOG] User ${userId} (${username}) encountered an error while loading library: ${e.message}`);
             return refreshDashboard(ctx, '❌ Ошибка загрузки.', { ...getMainMenu() });
         }
     }
 
     const cache = libraryCache[chatId];
-    if (!cache) return smartEdit(ctx, '⚠️ Данные устарели.', { ...getMainMenu() });
+    if (!cache) {
+        console.log(`[LOG] User ${userId} (${username}) found outdated data.`);
+        return smartEdit(ctx, '⚠️ Данные устарели.', { ...getMainMenu() });
+    }
 
     const games = cache.games;
     const limit = 5;
@@ -94,8 +112,14 @@ async function showLibrary(ctx, page = 1, isPagination = false) {
 // ==================================================================
 async function showDeleteMenu(ctx, page = 1, isPagination = false) {
     const chatId = ctx.chat.id;
+    const userId = ctx.from.id;
+    const username = ctx.from.first_name || ctx.from.username || 'Unknown';
     const settings = getChatSettings(chatId);
-    if (!settings) return refreshDashboard(ctx, '⚠️ Бот не настроен.', { ...getMainMenu() });
+    
+    if (!settings) {
+        console.log(`[LOG] User ${userId} (${username}) attempted to open delete menu but bot not configured.`);
+        return refreshDashboard(ctx, '⚠️ Бот не настроен.', { ...getMainMenu() });
+    }
 
     if (!isPagination || !deleteCache[chatId]) {
         if (!isPagination) await refreshDashboard(ctx, '⏳ Загрузка списка...', { ...getCancelMenu() });
@@ -104,10 +128,16 @@ async function showDeleteMenu(ctx, page = 1, isPagination = false) {
             const data = await fetchGameData(settings.scriptUrl);
             const games = (data.games || []).sort((a, b) => b.id - a.id);
 
-            if (games.length === 0) return refreshDashboard(ctx, '📭 Нечего удалять.', { ...getMainMenu() });
+            console.log(`[LOG] User ${userId} (${username}) fetched delete menu data: ${games.length} games.`);
+
+            if (games.length === 0) {
+                console.log(`[LOG] User ${userId} (${username}) found nothing to delete.`);
+                return refreshDashboard(ctx, '📭 Нечего удалять.', { ...getMainMenu() });
+            }
 
             deleteCache[chatId] = { games };
         } catch (e) {
+            console.error(`[LOG] User ${userId} (${username}) encountered an error while loading delete menu: ${e.message}`);
             return refreshDashboard(ctx, '❌ Ошибка загрузки.', { ...getMainMenu() });
         }
     }
@@ -115,6 +145,7 @@ async function showDeleteMenu(ctx, page = 1, isPagination = false) {
     const games = deleteCache[chatId].games;
 
     if (games.length === 0) {
+        console.log(`[LOG] User ${userId} (${username}) found an empty delete menu.`);
         return smartEdit(ctx, '📭 Библиотека пуста.', { ...getMainMenu() });
     }
 
@@ -142,14 +173,24 @@ async function showDeleteMenu(ctx, page = 1, isPagination = false) {
 }
 
 module.exports = (bot) => {
-    bot.action('menu_library', (ctx) => showLibrary(ctx, 1, false));
+    bot.action('menu_library', (ctx) => {
+        console.log(`[LOG] User ${ctx.from.id} (${ctx.from.first_name || ctx.from.username || 'Unknown'}) opened the library menu.`);
+        showLibrary(ctx, 1, false);
+    });
+    
     bot.action(/lib_page_(\d+)/, (ctx) => {
+        console.log(`[LOG] User ${ctx.from.id} (${ctx.from.first_name || ctx.from.username || 'Unknown'}) navigated to page ${ctx.match[1]} of the library.`);
         showLibrary(ctx, parseInt(ctx.match[1]), true);
         ctx.answerCbQuery();
     });
 
-    bot.action('menu_delete', (ctx) => showDeleteMenu(ctx, 1, false));
+    bot.action('menu_delete', (ctx) => {
+        console.log(`[LOG] User ${ctx.from.id} (${ctx.from.first_name || ctx.from.username || 'Unknown'}) opened the delete menu.`);
+        showDeleteMenu(ctx, 1, false);
+    });
+
     bot.action(/del_page_(\d+)/, (ctx) => {
+        console.log(`[LOG] User ${ctx.from.id} (${ctx.from.first_name || ctx.from.username || 'Unknown'}) navigated to page ${ctx.match[1]} of the delete menu.`);
         showDeleteMenu(ctx, parseInt(ctx.match[1]), true);
         ctx.answerCbQuery();
     });
@@ -157,6 +198,8 @@ module.exports = (bot) => {
     bot.action(/del_game_(\d+)/, async (ctx) => {
         const idToRemove = parseInt(ctx.match[1]);
         const chatId = ctx.chat.id;
+        const userId = ctx.from.id;
+        const username = ctx.from.first_name || ctx.from.username || 'Unknown';
         const settings = getChatSettings(chatId);
 
         try {
@@ -171,11 +214,12 @@ module.exports = (bot) => {
 
             delete libraryCache[chatId];
 
+            console.log(`[LOG] User ${userId} (${username}) removed game with id ${idToRemove}.`);
             await ctx.answerCbQuery('✅ Игра удалена');
             await showDeleteMenu(ctx, 1, true);
 
         } catch (e) {
-            console.error('Delete Error:', e.message);
+            console.error(`[LOG] User ${userId} (${username}) encountered an error while deleting game: ${e.message}`);
             await ctx.answerCbQuery('⚠️ Запрос отправлен, но ответ не получен.');
             await showDeleteMenu(ctx, 1, true);
         }
@@ -185,6 +229,7 @@ module.exports = (bot) => {
     bot.use((ctx, next) => {
         if (ctx.callbackQuery && ctx.callbackQuery.data === 'menu_main') {
             const chatId = ctx.chat.id;
+            console.log(`[LOG] User ${ctx.from.id} (${ctx.from.first_name || ctx.from.username || 'Unknown'}) is clearing caches on returning to main menu.`);
             if (libraryCache[chatId]) delete libraryCache[chatId];
             if (deleteCache[chatId]) delete deleteCache[chatId];
         }

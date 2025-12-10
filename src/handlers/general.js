@@ -4,34 +4,66 @@ const { updateChatSettings } = require('../utils/db');
 
 module.exports = (bot, userStates) => {
     bot.start(async (ctx) => {
+        const chatId = ctx.chat.id;
+        const userId = ctx.from.id;
+        const username = ctx.from.first_name || ctx.from.username || 'Unknown';
+
         await cleanMsg(ctx);
-        userStates[ctx.chat.id] = null;
+        userStates[chatId] = null;
+
+        console.log(`[LOG] User ${userId} (${username}) started the bot.`);
+
         await refreshDashboard(ctx, '👋 <b>Steam Library Bot</b>', { parse_mode: 'HTML', ...getMainMenu() });
     });
 
     bot.action('menu_main', (ctx) => {
+        const chatId = ctx.chat.id;
+        const userId = ctx.from.id;
+        const username = ctx.from.first_name || ctx.from.username || 'Unknown';
+
         // Если объект чата существует, удаляем состояние пользователя
-        if (userStates[ctx.chat.id]) delete userStates[ctx.chat.id][ctx.from.id];
+        if (userStates[chatId]) {
+            delete userStates[chatId][userId];
+            console.log(`[LOG] User ${userId} (${username}) returned to the main menu.`);
+        }
 
         refreshDashboard(ctx, '🏠 <b>Главное меню</b>', { parse_mode: 'HTML', ...getMainMenu() });
     });
 
     bot.action('denis_answer', async (ctx) => {
+        const userId = ctx.from.id;
+        const username = ctx.from.first_name || ctx.from.username || 'Unknown';
+
         await ctx.reply('Без комментариев');
         await ctx.answerCbQuery();
+        console.log(`[LOG] User ${userId} (${username}) received a default answer to the 'denis_answer' action.`);
     });
 
     bot.action('action_close', async (ctx) => {
+        const chatId = ctx.chat.id;
+        const userId = ctx.from.id;
+        const username = ctx.from.first_name || ctx.from.username || 'Unknown';
+
         try {
             await ctx.deleteMessage();
-            updateChatSettings(ctx.chat.id, 'lastMessageId', null);
+            updateChatSettings(chatId, 'lastMessageId', null);
+            console.log(`[LOG] User ${userId} (${username}) closed the message successfully.`);
         } catch (e) {
             await ctx.answerCbQuery('Не удалось закрыть');
+            console.log(`[LOG] User ${userId} (${username}) failed to close the message: ${e.message}`);
         }
     });
 
     bot.action('action_cancel', (ctx) => {
-        if (userStates[ctx.chat.id]) delete userStates[ctx.chat.id][ctx.from.id];
+        const chatId = ctx.chat.id;
+        const userId = ctx.from.id;
+        const username = ctx.from.first_name || ctx.from.username || 'Unknown';
+
+        if (userStates[chatId]) {
+            delete userStates[chatId][userId];
+            console.log(`[LOG] User ${userId} (${username}) canceled the action.`);
+        }
+
         refreshDashboard(ctx, '🚫 Действие отменено.', { parse_mode: 'HTML', ...getMainMenu() });
     });
 };
