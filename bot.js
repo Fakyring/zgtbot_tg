@@ -1,4 +1,5 @@
 const { Telegraf } = require('telegraf');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 const config = require('./src/config');
 
 if (!config.BOT_TOKEN) {
@@ -6,7 +7,11 @@ if (!config.BOT_TOKEN) {
     process.exit(1);
 }
 
-const bot = new Telegraf(config.BOT_TOKEN);
+const botOptions = config.PROXY_URL
+    ? { telegram: { agent: new HttpsProxyAgent(config.PROXY_URL) } }
+    : undefined;
+
+const bot = new Telegraf(config.BOT_TOKEN, botOptions);
 const userStates = {}; // Хранение состояний (в памяти)
 
 // Middleware для блокировки пользователей
