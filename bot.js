@@ -30,12 +30,21 @@ require('./src/handlers/settings')(bot, userStates);
 require('./src/handlers/games')(bot, userStates);
 require('./src/handlers/library')(bot);
 
-bot.launch({ dropPendingUpdates: true })
-    .then(() => console.log('✅ Bot started successfully'))
-    .catch((error) => {
-        console.error('❌ Failed to start bot:', error.message);
-        process.exit(1);
-    });
+async function launchBot() {
+    while (true) {
+        try {
+            await bot.launch({ dropPendingUpdates: true });
+            console.log('✅ Bot started successfully');
+            break;
+        } catch (error) {
+            console.error(`❌ Failed to start bot: ${error.message}`);
+            console.error(`Retrying in ${Math.round(config.START_RETRY_DELAY_MS / 1000)} seconds...`);
+            await new Promise((resolve) => setTimeout(resolve, config.START_RETRY_DELAY_MS));
+        }
+    }
+}
+
+launchBot();
 
 // Graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
