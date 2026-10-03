@@ -17,7 +17,7 @@ services:
     environment:
       BOT_TOKEN: ${BOT_TOKEN:?BOT_TOKEN is required}
       STEAM_API_KEY: ${STEAM_API_KEY:?STEAM_API_KEY is required}
-      HTTPS_PROXY: ${HTTPS_PROXY:-http://tor-proxy:8118}
+      HTTPS_PROXY: ${HTTPS_PROXY:-socks5h://tor-proxy:9050}
       START_RETRY_DELAY_MS: ${START_RETRY_DELAY_MS:-30000}
       DB_FILE: /data/settings.json
     volumes:

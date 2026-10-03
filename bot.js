@@ -1,5 +1,6 @@
 const { Telegraf } = require('telegraf');
 const { HttpsProxyAgent } = require('https-proxy-agent');
+const { SocksProxyAgent } = require('socks-proxy-agent');
 const config = require('./src/config');
 
 if (!config.BOT_TOKEN) {
@@ -7,9 +8,18 @@ if (!config.BOT_TOKEN) {
     process.exit(1);
 }
 
-const botOptions = config.PROXY_URL
-    ? { telegram: { agent: new HttpsProxyAgent(config.PROXY_URL) } }
-    : undefined;
+function createProxyAgent(proxyUrl) {
+    if (!proxyUrl) return undefined;
+
+    if (proxyUrl.startsWith('socks://') || proxyUrl.startsWith('socks4://') || proxyUrl.startsWith('socks5://') || proxyUrl.startsWith('socks5h://')) {
+        return new SocksProxyAgent(proxyUrl);
+    }
+
+    return new HttpsProxyAgent(proxyUrl);
+}
+
+const proxyAgent = createProxyAgent(config.PROXY_URL);
+const botOptions = proxyAgent ? { telegram: { agent: proxyAgent } } : undefined;
 
 const bot = new Telegraf(config.BOT_TOKEN, botOptions);
 const userStates = {}; // Хранение состояний (в памяти)
