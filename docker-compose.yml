@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: telegram-bot-games-parser:latest
     command: node bot.js
     restart: unless-stopped
     environment:

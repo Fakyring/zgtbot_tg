@@ -26,7 +26,11 @@ require('./src/handlers/games')(bot, userStates);
 require('./src/handlers/library')(bot);
 
 bot.launch({ dropPendingUpdates: true })
-console.log('✅ Bot started successfully');
+    .then(() => console.log('✅ Bot started successfully'))
+    .catch((error) => {
+        console.error('❌ Failed to start bot:', error.message);
+        process.exit(1);
+    });
 
 // Graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
