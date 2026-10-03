@@ -7,17 +7,25 @@ const { sleep } = require('../utils/helpers');
 
 module.exports = (bot, userStates) => {
     bot.action('menu_settings', (ctx) => {
-        userStates[ctx.chat.id] = null;
+        const chatId = ctx.chat.id;
+        const userId = ctx.from.id;
+        if (userStates[chatId]) delete userStates[chatId][userId];
         refreshDashboard(ctx, '⚙️ <b>Настройки</b>', { parse_mode: 'HTML', ...getSettingsMenu() });
     });
 
     bot.action('set_link_table', (ctx) => {
-        userStates[ctx.chat.id] = 'WAITING_FOR_SCRIPT_URL';
+        const chatId = ctx.chat.id;
+        const userId = ctx.from.id;
+        if (!userStates[chatId]) userStates[chatId] = {};
+        userStates[chatId][userId] = 'WAITING_FOR_SCRIPT_URL';
         refreshDashboard(ctx, '🔗 <b>Привязка</b>\nОтправьте ссылку на Google Apps Script (Web App URL).', { parse_mode: 'HTML', ...getCancelMenu() });
     });
 
     bot.action('set_add_user', (ctx) => {
-        userStates[ctx.chat.id] = 'WAITING_FOR_USER_DATA';
+        const chatId = ctx.chat.id;
+        const userId = ctx.from.id;
+        if (!userStates[chatId]) userStates[chatId] = {};
+        userStates[chatId][userId] = 'WAITING_FOR_USER_DATA';
         refreshDashboard(ctx, '👤 <b>Добавить друга</b>\nОтправьте: SteamID64 Имя', { parse_mode: 'HTML', ...getCancelMenu() });
     });
 
