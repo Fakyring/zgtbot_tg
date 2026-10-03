@@ -2,7 +2,7 @@ const { Telegraf } = require('telegraf');
 const config = require('./src/config');
 
 if (!config.BOT_TOKEN) {
-    console.error('❌ ERR: .env file missing BOT_TOKEN');
+    console.error('❌ ERR: BOT_TOKEN environment variable is missing');
     process.exit(1);
 }
 

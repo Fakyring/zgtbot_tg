@@ -1,5 +1,20 @@
-node_modules
+node_modules/
+.idea/
+.kilo/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+secrets.json
+
+# Local application data and logs
 settings.json
 *.log
-.idea
-.kilo
