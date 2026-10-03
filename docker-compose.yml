@@ -1,16 +1,16 @@
 services:
   bot:
-    image: node:22-alpine
-    working_dir: /app
-    command: sh -c "npm ci --omit=dev && node bot.js"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: telegram-bot-games-parser:latest
+    command: node bot.js
     restart: unless-stopped
-    env_file:
-      - stack.env
     environment:
+      BOT_TOKEN: ${BOT_TOKEN:?BOT_TOKEN is required}
+      STEAM_API_KEY: ${STEAM_API_KEY:?STEAM_API_KEY is required}
       DB_FILE: /data/settings.json
     volumes:
-      - .:/app
-      - /app/node_modules
       - bot-data:/data
 
 volumes:
