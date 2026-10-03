@@ -1,13 +1,13 @@
 services:
   tor-proxy:
-    image: dockage/tor-privoxy:latest
+    image: dperson/torproxy:latest
     restart: unless-stopped
 
   bot:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "sleep 60 && node bot.js"
+    command: sh -c "sleep 120 && node bot.js"
     restart: unless-stopped
     depends_on:
       - tor-proxy
