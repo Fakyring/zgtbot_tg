@@ -1,4 +1,5 @@
 const { Telegraf } = require('telegraf');
+const axios = require('axios');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const { SocksProxyAgent } = require('socks-proxy-agent');
 const config = require('./src/config');
@@ -19,6 +20,12 @@ function createProxyAgent(proxyUrl) {
 }
 
 const proxyAgent = createProxyAgent(config.PROXY_URL);
+if (proxyAgent) {
+    axios.defaults.proxy = false;
+    axios.defaults.httpAgent = proxyAgent;
+    axios.defaults.httpsAgent = proxyAgent;
+}
+
 const botOptions = proxyAgent ? { telegram: { agent: proxyAgent } } : undefined;
 
 const bot = new Telegraf(config.BOT_TOKEN, botOptions);
