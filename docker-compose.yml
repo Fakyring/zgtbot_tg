@@ -1,0 +1,17 @@
+services:
+  bot:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci --omit=dev && node bot.js"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_FILE: /data/settings.json
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - bot-data:/data
+
+volumes:
+  bot-data:
