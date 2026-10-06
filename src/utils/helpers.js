@@ -40,6 +40,21 @@ async function deleteOldDashboard(ctx) {
     }
 }
 
+async function closeDashboard(ctx) {
+    await deleteOldDashboard(ctx);
+
+    const db = loadSettings();
+    const chatId = ctx.chat?.id;
+    const userId = ctx.from?.id;
+    if (!chatId || !db[chatId]) return;
+
+    db[chatId].lastMessageId = null;
+    if (userId && db[chatId].userDashboards) {
+        delete db[chatId].userDashboards[userId];
+    }
+    saveSettings(db);
+}
+
 function isGroupChat(ctx) {
     return ctx.chat?.type === 'group' || ctx.chat?.type === 'supergroup';
 }
@@ -172,4 +187,4 @@ async function smartEdit(ctx, text, extra = {}) {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-module.exports = { cleanMsg, refreshDashboard, smartEdit, sleep };
+module.exports = { cleanMsg, refreshDashboard, smartEdit, closeDashboard, sleep };

@@ -1,6 +1,5 @@
-const { refreshDashboard, cleanMsg, smartEdit } = require('../utils/helpers');
+const { refreshDashboard, cleanMsg, smartEdit, closeDashboard } = require('../utils/helpers');
 const { getMainMenu, getCancelMenu } = require('../keyboards');
-const { updateChatSettings } = require('../utils/db');
 
 module.exports = (bot, userStates) => {
     bot.start(async (ctx) => {
@@ -56,8 +55,7 @@ module.exports = (bot, userStates) => {
         const username = ctx.from.first_name || ctx.from.username || 'Unknown';
 
         try {
-            await ctx.deleteMessage();
-            updateChatSettings(chatId, 'lastMessageId', null);
+            await closeDashboard(ctx);
             console.log(`[LOG] User ${userId} (${username}) closed the message successfully.`);
         } catch (e) {
             await ctx.answerCbQuery('Не удалось закрыть');
