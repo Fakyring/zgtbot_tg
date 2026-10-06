@@ -127,6 +127,7 @@ async function refreshDashboard(ctx, text, extra = {}) {
 async function smartEdit(ctx, text, extra = {}) {
     if (isGroupChat(ctx)) {
         // В группе нельзя падать на обычный editMessageText: он меняет публичное сообщение для всех.
+        await deleteOldDashboard(ctx);
         return sendEphemeralMessage(ctx, text, extra);
     }
 
