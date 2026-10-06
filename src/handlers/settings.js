@@ -18,6 +18,8 @@ module.exports = (bot, userStates) => {
         const userId = ctx.from.id;
         if (!userStates[chatId]) userStates[chatId] = {};
         userStates[chatId][userId] = 'WAITING_FOR_SCRIPT_URL';
+        if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
+        userStates[chatId]._lastActivity[userId] = Date.now();
         refreshDashboard(ctx, '🔗 <b>Привязка</b>\nОтправьте ссылку на Google Apps Script (Web App URL).', { parse_mode: 'HTML', ...getCancelMenu() });
     });
 
@@ -26,6 +28,8 @@ module.exports = (bot, userStates) => {
         const userId = ctx.from.id;
         if (!userStates[chatId]) userStates[chatId] = {};
         userStates[chatId][userId] = 'WAITING_FOR_USER_DATA';
+        if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
+        userStates[chatId]._lastActivity[userId] = Date.now();
         refreshDashboard(ctx, '👤 <b>Добавить друга</b>\nОтправьте: SteamID64 Имя', { parse_mode: 'HTML', ...getCancelMenu() });
     });
 
@@ -113,8 +117,13 @@ module.exports = (bot, userStates) => {
         const userId = ctx.from.id;
 
         const state = userStates[chatId]?.[userId];
+        if (!state) return next();
 
         const text = ctx.message.text.trim();
+
+        // Обновляем таймер активности при каждом сообщении в состоянии
+        if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
+        userStates[chatId]._lastActivity[userId] = Date.now();
 
         if (state === 'WAITING_FOR_SCRIPT_URL') {
             await cleanMsg(ctx);

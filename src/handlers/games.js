@@ -19,8 +19,10 @@ module.exports = (bot, userStates) => {
         // Инициализируем объект чата, если его нет
         if (!userStates[chatId]) userStates[chatId] = {};
 
-        // Устанавливаем состояние КОНКРЕТНОМУ пользователю
+        // Устанавливаем состояние и время активности КОНКРЕТНОМУ пользователю
         userStates[chatId][userId] = 'WAITING_FOR_GAME_LINK';
+        if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
+        userStates[chatId]._lastActivity[userId] = Date.now();
 
         refreshDashboard(ctx, '🎮 <b>Добавление игры</b>\nОтправьте ссылку на игру в Steam <b>ИЛИ</b> просто её название.', { parse_mode: 'HTML', ...getCancelMenu() });
     });
@@ -37,14 +39,18 @@ module.exports = (bot, userStates) => {
         const text = ctx.message.text.trim();
         console.log(`[LOG] User ${userId} (${username}) in state ${state}: "${text}"`);
 
+        // Обновляем таймер активности при каждом сообщении в состоянии
+        if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
+        userStates[chatId]._lastActivity[userId] = Date.now();
+
         const settings = getChatSettings(chatId);
-        if (!settings?.scriptUrl && state !== 'WAITING_FOR_SCRIPT_URL') {
-            if (userStates[chatId]) delete userStates[chatId][userId];
-            return refreshDashboard(ctx, '⚠️ Бот не настроен (нет ссылки на таблицу).', { ...getMainMenu() });
-        }
 
         if (state === 'WAITING_FOR_GAME_LINK') {
-            const loadingMsg = await ctx.reply('⏳ Ищу игру...');
+            await cleanMsg(ctx);
+            let loadingMsg = null;
+            try {
+                loadingMsg = await ctx.reply('⏳ Ищу игру...');
+            } catch (e) {}
 
             let game = null;
             if (text.includes('store.steampowered.com/app/')) {
@@ -53,10 +59,12 @@ module.exports = (bot, userStates) => {
                 game = await searchSteamGame(text);
             }
 
-            try { 
-                await ctx.telegram.deleteMessage(chatId, loadingMsg.message_id); 
-            } catch(e) {
-                console.log(`[LOG] Failed to delete loading message for user ${userId}: ${e.message}`);
+            if (loadingMsg) {
+                try { 
+                    await ctx.telegram.deleteMessage(chatId, loadingMsg.message_id); 
+                } catch(e) {
+                    console.log(`[LOG] Failed to delete loading message for user ${userId}: ${e.message}`);
+                }
             }
 
             if (!game) {
@@ -64,7 +72,6 @@ module.exports = (bot, userStates) => {
                 return refreshDashboard(ctx, '❌ <b>Игра не найдена!</b>\nПроверьте ссылку или название.', { parse_mode: 'HTML', ...getCancelMenu() });
             }
 
-            await cleanMsg(ctx);
             console.log(`[LOG] Game found for user ${userId} (${username}): ${game.title}. Checking FreeTP and owners...`);
 
             await refreshDashboard(ctx, `🔎 Найдено: <b>${game.title}</b>\nПроверяю FreeTP и владельцев...`, { parse_mode: 'HTML' });

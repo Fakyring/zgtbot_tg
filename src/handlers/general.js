@@ -21,9 +21,13 @@ module.exports = (bot, userStates) => {
         const userId = ctx.from.id;
         const username = ctx.from.first_name || ctx.from.username || 'Unknown';
 
-        // Если объект чата существует, удаляем состояние пользователя
         if (userStates[chatId]) {
-            delete userStates[chatId][userId];
+            if (userStates[chatId][userId]) {
+                delete userStates[chatId][userId];
+            }
+            if (userStates[chatId]._lastActivity) {
+                delete userStates[chatId]._lastActivity[userId];
+            }
             console.log(`[LOG] User ${userId} (${username}) returned to the main menu.`);
         }
 
@@ -71,7 +75,10 @@ module.exports = (bot, userStates) => {
     bot.use((ctx, next) => {
         const chatId = ctx.chat.id;
         const userId = ctx.from?.id;
-        if (!userId || !userStates[chatId] || !userStates[chatId][userId]) return next();
+        if (!userId || !userStates[chatId]) return next();
+
+        const state = userStates[chatId][userId];
+        if (!state) return next();
 
         const now = Date.now();
         if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};

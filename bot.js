@@ -50,6 +50,18 @@ require('./src/handlers/library')(bot);
 async function launchBot() {
     while (true) {
         try {
+            // Регистрация эфемерных команд в группах (Bot API 10.2+)
+            try {
+                await bot.telegram.callApi('setMyCommands', {
+                    commands: [
+                        { command: 'start', description: 'Открыть меню Steam Bot', is_ephemeral: true }
+                    ],
+                    scope: { type: 'all_group_chats' }
+                });
+            } catch (e) {
+                console.log(`[CONFIG] setMyCommands notice: ${e.message}`);
+            }
+
             await bot.launch({ dropPendingUpdates: true });
             console.log('✅ Bot started successfully');
             break;
