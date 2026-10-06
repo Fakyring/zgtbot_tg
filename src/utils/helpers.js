@@ -44,9 +44,9 @@ function isGroupChat(ctx) {
     return ctx.chat?.type === 'group' || ctx.chat?.type === 'supergroup';
 }
 
-function getEphemeralParams(ctx) {
+function getEphemeralParams(ctx, useCallbackQuery = true) {
     const userId = ctx.from?.id;
-    const callbackQueryId = ctx.callbackQuery?.id;
+    const callbackQueryId = useCallbackQuery ? ctx.callbackQuery?.id : null;
     if (!userId) return null;
 
     return {
@@ -86,6 +86,21 @@ async function sendEphemeralMessage(ctx, text, extra = {}) {
         return msg;
     } catch (err1) {
         console.log(`[EPHEMERAL 10.3] Failed: ${err1.message}`);
+
+        if (ctx.callbackQuery?.id) {
+            try {
+                const msg = await ctx.telegram.callApi('sendMessage', {
+                    chat_id: ctx.chat.id,
+                    text,
+                    ephemeral_message_parameters: getEphemeralParams(ctx, false),
+                    ...extra
+                });
+                saveDashboardMessage(ctx, msg);
+                return msg;
+            } catch (errRetry) {
+                console.log(`[EPHEMERAL 10.3 NO CALLBACK] Failed: ${errRetry.message}`);
+            }
+        }
     }
 
     try {
@@ -100,6 +115,21 @@ async function sendEphemeralMessage(ctx, text, extra = {}) {
         return msg;
     } catch (err2) {
         console.log(`[EPHEMERAL 10.2] Failed: ${err2.message}`);
+
+        if (ctx.callbackQuery?.id) {
+            try {
+                const msg = await ctx.telegram.callApi('sendMessage', {
+                    chat_id: ctx.chat.id,
+                    text,
+                    receiver_user_id: userId,
+                    ...extra
+                });
+                saveDashboardMessage(ctx, msg);
+                return msg;
+            } catch (errRetry) {
+                console.log(`[EPHEMERAL 10.2 NO CALLBACK] Failed: ${errRetry.message}`);
+            }
+        }
     }
 
     if (ctx.callbackQuery?.id) {
