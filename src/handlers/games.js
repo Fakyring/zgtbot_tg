@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { refreshDashboard, cleanMsg, smartEdit, setInputTimer, clearInputTimer } = require('../utils/helpers');
+const { refreshDashboard, cleanMsg, smartEdit } = require('../utils/helpers');
 const { getMainMenu, getCancelMenu } = require('../keyboards');
 const { getChatSettings } = require('../utils/db');
 const { getSteamGameInfo, getUserLibrary, searchSteamGame } = require('../services/steam');
@@ -18,13 +18,10 @@ module.exports = (bot, userStates) => {
         // Инициализируем объект чата, если его нет
         if (!userStates[chatId]) userStates[chatId] = {};
 
-        // Устанавливаем состояние и время активности КОНКРЕТНОМУ пользователю
+        // Устанавливаем состояние КОНКРЕТНОМУ пользователю
         userStates[chatId][userId] = 'WAITING_FOR_GAME_LINK';
-        if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
-        userStates[chatId]._lastActivity[userId] = Date.now();
-        setInputTimer(ctx, userStates);
 
-        smartEdit(ctx, '🎮 <b>Добавление игры</b>\nОтправьте ссылку на игру в Steam <b>ИЛИ</b> просто её название.\n\n⏱ У вас есть 60 секунд на ввод.', { parse_mode: 'HTML', ...getCancelMenu() });
+        smartEdit(ctx, '🎮 <b>Добавление игры</b>\nОтправьте ссылку на игру в Steam <b>ИЛИ</b> просто её название.', { parse_mode: 'HTML', ...getCancelMenu() });
     });
 
     // Обработка текста (только когда пользователь в состоянии)
@@ -35,14 +32,9 @@ module.exports = (bot, userStates) => {
 
         const state = userStates[chatId]?.[userId];
         if (!state) return next();
-        clearInputTimer(userStates, chatId, userId);
 
         const text = ctx.message.text.trim();
         console.log(`[LOG] User ${userId} (${username}) in state ${state}: "${text}"`);
-
-        // Обновляем таймер активности при каждом сообщении в состоянии
-        if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
-        userStates[chatId]._lastActivity[userId] = Date.now();
 
         const settings = getChatSettings(chatId);
 

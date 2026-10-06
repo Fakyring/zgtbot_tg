@@ -1,4 +1,4 @@
-const { refreshDashboard, cleanMsg, smartEdit, clearInputTimer } = require('../utils/helpers');
+const { refreshDashboard, cleanMsg, smartEdit } = require('../utils/helpers');
 const { getMainMenu, getCancelMenu } = require('../keyboards');
 const { updateChatSettings } = require('../utils/db');
 
@@ -25,10 +25,6 @@ module.exports = (bot, userStates) => {
         if (userStates[chatId]) {
             if (userStates[chatId][userId]) {
                 delete userStates[chatId][userId];
-            }
-            clearInputTimer(userStates, chatId, userId);
-            if (userStates[chatId]._lastActivity) {
-                delete userStates[chatId]._lastActivity[userId];
             }
             console.log(`[LOG] User ${userId} (${username}) returned to the main menu.`);
         }
@@ -67,34 +63,9 @@ module.exports = (bot, userStates) => {
 
         if (userStates[chatId]) {
             delete userStates[chatId][userId];
-            clearInputTimer(userStates, chatId, userId);
             console.log(`[LOG] User ${userId} (${username}) canceled the action.`);
         }
 
         smartEdit(ctx, '🚫 Действие отменено.', { parse_mode: 'HTML', ...getMainMenu() });
-    });
-
-    // Страховочный авто-сброс состояний, если setTimeout не сработал после перезапуска процесса.
-    bot.use((ctx, next) => {
-        const chatId = ctx.chat.id;
-        const userId = ctx.from?.id;
-        if (!userId || !userStates[chatId]) return next();
-
-        const state = userStates[chatId][userId];
-        if (!state) return next();
-
-        const now = Date.now();
-        if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
-        const last = userStates[chatId]._lastActivity[userId] || 0;
-
-        if (now - last > 60000) { // 60 секунд
-            delete userStates[chatId][userId];
-            clearInputTimer(userStates, chatId, userId);
-            delete userStates[chatId]._lastActivity[userId];
-            console.log(`[STATE] Auto-reset state for user ${userId} (timeout 60s fallback)`);
-        } else {
-            userStates[chatId]._lastActivity[userId] = now;
-        }
-        return next();
     });
 };

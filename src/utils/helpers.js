@@ -142,33 +142,4 @@ async function smartEdit(ctx, text, extra = {}) {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-function clearInputTimer(userStates, chatId, userId) {
-    const timer = userStates[chatId]?._timers?.[userId];
-    if (timer) clearTimeout(timer);
-    if (userStates[chatId]?._timers) delete userStates[chatId]._timers[userId];
-}
-
-function setInputTimer(ctx, userStates, timeoutMs = 60000) {
-    const chatId = ctx.chat.id;
-    const userId = ctx.from.id;
-
-    if (!userStates[chatId]) userStates[chatId] = {};
-    if (!userStates[chatId]._timers) userStates[chatId]._timers = {};
-
-    clearInputTimer(userStates, chatId, userId);
-
-    userStates[chatId]._timers[userId] = setTimeout(async () => {
-        if (!userStates[chatId]?.[userId]) return;
-
-        delete userStates[chatId][userId];
-        delete userStates[chatId]._timers[userId];
-        if (userStates[chatId]._lastActivity) delete userStates[chatId]._lastActivity[userId];
-
-        console.log(`[STATE] Auto-reset state for user ${userId} (timeout 60s)`);
-        const timeoutCtx = Object.create(ctx);
-        timeoutCtx.callbackQuery = null;
-        await refreshDashboard(timeoutCtx, '⌛ Время ожидания истекло. Возвращаю в главное меню.', { parse_mode: 'HTML', ...require('../keyboards').getMainMenu() });
-    }, timeoutMs);
-}
-
-module.exports = { cleanMsg, refreshDashboard, smartEdit, sleep, setInputTimer, clearInputTimer };
+module.exports = { cleanMsg, refreshDashboard, smartEdit, sleep };
