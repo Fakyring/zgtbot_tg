@@ -149,7 +149,7 @@ async function showDeleteMenu(ctx, page = 1, isPagination = false) {
         return smartEdit(ctx, '📭 Библиотека пуста.', { ...getMainMenu() });
     }
 
-    const limit = 5;
+    const limit = 10;
     const totalPages = Math.ceil(games.length / limit) || 1;
 
     // Корректировка страницы (если удалили всё на последней странице)
