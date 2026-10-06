@@ -66,4 +66,24 @@ module.exports = (bot, userStates) => {
 
         refreshDashboard(ctx, '🚫 Действие отменено.', { parse_mode: 'HTML', ...getMainMenu() });
     });
+
+    // Middleware для авто-сброса состояний (таймер 5 минут)
+    bot.use((ctx, next) => {
+        const chatId = ctx.chat.id;
+        const userId = ctx.from?.id;
+        if (!userId || !userStates[chatId] || !userStates[chatId][userId]) return next();
+
+        const now = Date.now();
+        if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
+        const last = userStates[chatId]._lastActivity[userId] || 0;
+
+        if (now - last > 300000) { // 5 минут
+            delete userStates[chatId][userId];
+            delete userStates[chatId]._lastActivity[userId];
+            console.log(`[STATE] Auto-reset state for user ${userId} (timeout 5min)`);
+        } else {
+            userStates[chatId]._lastActivity[userId] = now;
+        }
+        return next();
+    });
 };

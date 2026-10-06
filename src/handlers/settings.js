@@ -130,8 +130,8 @@ module.exports = (bot, userStates) => {
         if (state === 'WAITING_FOR_USER_DATA') {
             await cleanMsg(ctx);
             const parts = text.split(/\s+/);
-            if (parts.length < 2 || parts[0].length !== 17) {
-                return refreshDashboard(ctx, '❌ <b>Ошибка формата!</b>\nSteamID (17 цифр) и Имя.', { parse_mode: 'HTML', ...getCancelMenu() });
+            if (parts.length < 2 || parts[0].length !== 17 || isNaN(parts[0])) {
+                return refreshDashboard(ctx, '❌ <b>Ошибка формата!</b>\nSteamID64 (17 цифр) + Имя', { parse_mode: 'HTML', ...getCancelMenu() });
             }
 
             const settings = getChatSettings(chatId);
@@ -142,6 +142,7 @@ module.exports = (bot, userStates) => {
 
                 return refreshDashboard(ctx, '✅ Друг добавлен!', { parse_mode: 'HTML', ...getMainMenu() });
             } catch (e) {
+                if(userStates[chatId]) delete userStates[chatId][userId];
                 return refreshDashboard(ctx, '❌ Ошибка API.', { ...getMainMenu() });
             }
         }
