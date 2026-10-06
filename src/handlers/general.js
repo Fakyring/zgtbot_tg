@@ -38,9 +38,9 @@ module.exports = (bot, userStates) => {
         const suffixes = ['0', 'o', 'X', 'x', '___-'];
         let answer = 'Без комментариев';
 
-        if (roll >= 0.9) {
+        if (roll >= 0.8) {
             answer = `-__${suffixes[Math.floor(Math.random() * suffixes.length)]}`;
-        } else if (roll >= 0.7) {
+        } else if (roll >= 0.5) {
             answer = '-_-';
         }
 
