@@ -95,7 +95,7 @@ async function showLibrary(ctx, page = 1, isPagination = false) {
     let text = `📚 <b>Библиотека (Стр. ${page}/${totalPages})</b>\n\n`;
     for (const g of chunk) {
         const priceShow = g.price ? `💰 ${g.price} | ` : '';
-        text += `🆔 <b>${g.id}</b> | <a href="${g.url}">${g.name}</a>\n${priceShow}🏴‍☠️ ${g.freetp}\n👥 ${g.owners}\n\n`;
+        text += `🆔 <b>${g.id}</b> | <a href="${g.url}">${g.name}</a>\n${priceShow}👥 ${g.owners}\n\n`;
     }
 
     const buttons = [];

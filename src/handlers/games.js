@@ -1,9 +1,8 @@
 const axios = require('axios');
-const { refreshDashboard, cleanMsg, smartEdit } = require('../utils/helpers');
+const { refreshDashboard, cleanMsg, smartEdit, setInputTimer, clearInputTimer } = require('../utils/helpers');
 const { getMainMenu, getCancelMenu } = require('../keyboards');
 const { getChatSettings } = require('../utils/db');
 const { getSteamGameInfo, getUserLibrary, searchSteamGame } = require('../services/steam');
-const { checkFreeTp } = require('../services/freetp');
 const { fetchGameData } = require('../services/sheets');
 
 module.exports = (bot, userStates) => {
@@ -23,8 +22,9 @@ module.exports = (bot, userStates) => {
         userStates[chatId][userId] = 'WAITING_FOR_GAME_LINK';
         if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
         userStates[chatId]._lastActivity[userId] = Date.now();
+        setInputTimer(ctx, userStates);
 
-        smartEdit(ctx, '🎮 <b>Добавление игры</b>\nОтправьте ссылку на игру в Steam <b>ИЛИ</b> просто её название.', { parse_mode: 'HTML', ...getCancelMenu() });
+        smartEdit(ctx, '🎮 <b>Добавление игры</b>\nОтправьте ссылку на игру в Steam <b>ИЛИ</b> просто её название.\n\n⏱ У вас есть 60 секунд на ввод.', { parse_mode: 'HTML', ...getCancelMenu() });
     });
 
     // Обработка текста (только когда пользователь в состоянии)
@@ -35,6 +35,7 @@ module.exports = (bot, userStates) => {
 
         const state = userStates[chatId]?.[userId];
         if (!state) return next();
+        clearInputTimer(userStates, chatId, userId);
 
         const text = ctx.message.text.trim();
         console.log(`[LOG] User ${userId} (${username}) in state ${state}: "${text}"`);
@@ -74,11 +75,9 @@ module.exports = (bot, userStates) => {
                 return refreshDashboard(ctx, '❌ <b>Игра не найдена!</b>\nПроверьте ссылку или название.', { parse_mode: 'HTML', ...getCancelMenu() });
             }
 
-            console.log(`[LOG] Game found for user ${userId} (${username}): ${game.title}. Checking FreeTP and owners...`);
+            console.log(`[LOG] Game found for user ${userId} (${username}): ${game.title}. Checking owners...`);
 
-            await refreshDashboard(ctx, `🔎 Найдено: <b>${game.title}</b>\nПроверяю FreeTP и владельцев...`, { parse_mode: 'HTML' });
-
-            const freetpStatus = await checkFreeTp(game.title);
+            await refreshDashboard(ctx, `🔎 Найдено: <b>${game.title}</b>\nПроверяю владельцев...`, { parse_mode: 'HTML' });
 
             let ownersStr = '-';
             try {
@@ -102,7 +101,6 @@ module.exports = (bot, userStates) => {
                     title: game.title,
                     url: game.url,
                     date: new Date().toLocaleDateString('ru-RU'),
-                    freetp: freetpStatus,
                     owners: ownersStr,
                     price: game.priceText
                 });
@@ -110,7 +108,7 @@ module.exports = (bot, userStates) => {
                 delete userStates[chatId][userId];
 
                 const msg = res.data.status === 'success'
-                    ? `✅ <b>Добавлено!</b>\n🎮 <a href="${game.url}">${game.title}</a>\n💰 ${game.priceText}\n👤 ${ownersStr}\n🏴‍☠️ FreeTP: ${freetpStatus}`
+                    ? `✅ <b>Добавлено!</b>\n🎮 <a href="${game.url}">${game.title}</a>\n💰 ${game.priceText}\n👤 ${ownersStr}`
                     : `✋ Игра уже есть.\n🎮 <a href="${game.url}">${game.title}</a>`;
 
                 console.log(`[LOG] User ${userId} (${username}) successfully added game: ${game.title}`);

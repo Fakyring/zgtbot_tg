@@ -1,4 +1,4 @@
-const { refreshDashboard, cleanMsg, smartEdit } = require('../utils/helpers');
+const { refreshDashboard, cleanMsg, smartEdit, clearInputTimer } = require('../utils/helpers');
 const { getMainMenu, getCancelMenu } = require('../keyboards');
 const { updateChatSettings } = require('../utils/db');
 
@@ -8,6 +8,7 @@ module.exports = (bot, userStates) => {
         const userId = ctx.from.id;
         const username = ctx.from.first_name || ctx.from.username || 'Unknown';
 
+        // Удаляем команду /start и /start@zgtgames_bot из общего чата.
         await cleanMsg(ctx);
         userStates[chatId] = null;
 
@@ -25,6 +26,7 @@ module.exports = (bot, userStates) => {
             if (userStates[chatId][userId]) {
                 delete userStates[chatId][userId];
             }
+            clearInputTimer(userStates, chatId, userId);
             if (userStates[chatId]._lastActivity) {
                 delete userStates[chatId]._lastActivity[userId];
             }
@@ -65,13 +67,14 @@ module.exports = (bot, userStates) => {
 
         if (userStates[chatId]) {
             delete userStates[chatId][userId];
+            clearInputTimer(userStates, chatId, userId);
             console.log(`[LOG] User ${userId} (${username}) canceled the action.`);
         }
 
         smartEdit(ctx, '🚫 Действие отменено.', { parse_mode: 'HTML', ...getMainMenu() });
     });
 
-    // Middleware для авто-сброса состояний (таймер 5 минут)
+    // Страховочный авто-сброс состояний, если setTimeout не сработал после перезапуска процесса.
     bot.use((ctx, next) => {
         const chatId = ctx.chat.id;
         const userId = ctx.from?.id;
@@ -84,10 +87,11 @@ module.exports = (bot, userStates) => {
         if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
         const last = userStates[chatId]._lastActivity[userId] || 0;
 
-        if (now - last > 300000) { // 5 минут
+        if (now - last > 60000) { // 60 секунд
             delete userStates[chatId][userId];
+            clearInputTimer(userStates, chatId, userId);
             delete userStates[chatId]._lastActivity[userId];
-            console.log(`[STATE] Auto-reset state for user ${userId} (timeout 5min)`);
+            console.log(`[STATE] Auto-reset state for user ${userId} (timeout 60s fallback)`);
         } else {
             userStates[chatId]._lastActivity[userId] = now;
         }
