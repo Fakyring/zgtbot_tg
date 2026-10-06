@@ -21,12 +21,12 @@ async function showLibrary(ctx, page = 1, isPagination = false) {
 
     if (!settings?.scriptUrl) {
         console.log(`[LOG] User ${userId} (${username}) attempted to view library but bot not configured.`);
-        return refreshDashboard(ctx, '⚠️ Бот не настроен.', { ...getMainMenu() });
+        return smartEdit(ctx, '⚠️ Бот не настроен.', { ...getMainMenu() });
     }
 
     // Если первый вход - грузим данные
     if (!isPagination) {
-        await refreshDashboard(ctx, '⏳ Загрузка библиотеки...', { ...getCancelMenu() });
+        await smartEdit(ctx, '⏳ Загрузка библиотеки...', { ...getCancelMenu() });
         try {
             const data = await fetchGameData(settings.scriptUrl);
             const games = data.games || [];
@@ -36,7 +36,7 @@ async function showLibrary(ctx, page = 1, isPagination = false) {
 
             if (games.length === 0) {
                 console.log(`[LOG] User ${userId} (${username}) found an empty library.`);
-                return refreshDashboard(ctx, '📭 Библиотека пуста.', { ...getMainMenu() });
+                return smartEdit(ctx, '📭 Библиотека пуста.', { ...getMainMenu() });
             }
 
             // --- Проверка владельцев ---
@@ -74,7 +74,7 @@ async function showLibrary(ctx, page = 1, isPagination = false) {
             libraryCache[chatId] = { games, users };
         } catch (e) {
             console.error(`[LOG] User ${userId} (${username}) encountered an error while loading library: ${e.message}`);
-            return refreshDashboard(ctx, '❌ Ошибка загрузки.', { ...getMainMenu() });
+            return smartEdit(ctx, '❌ Ошибка загрузки.', { ...getMainMenu() });
         }
     }
 
@@ -118,11 +118,11 @@ async function showDeleteMenu(ctx, page = 1, isPagination = false) {
     
     if (!settings) {
         console.log(`[LOG] User ${userId} (${username}) attempted to open delete menu but bot not configured.`);
-        return refreshDashboard(ctx, '⚠️ Бот не настроен.', { ...getMainMenu() });
+        return smartEdit(ctx, '⚠️ Бот не настроен.', { ...getMainMenu() });
     }
 
     if (!isPagination || !deleteCache[chatId]) {
-        if (!isPagination) await refreshDashboard(ctx, '⏳ Загрузка списка...', { ...getCancelMenu() });
+        if (!isPagination) await smartEdit(ctx, '⏳ Загрузка списка...', { ...getCancelMenu() });
 
         try {
             const data = await fetchGameData(settings.scriptUrl);
@@ -132,13 +132,13 @@ async function showDeleteMenu(ctx, page = 1, isPagination = false) {
 
             if (games.length === 0) {
                 console.log(`[LOG] User ${userId} (${username}) found nothing to delete.`);
-                return refreshDashboard(ctx, '📭 Нечего удалять.', { ...getMainMenu() });
+                return smartEdit(ctx, '📭 Нечего удалять.', { ...getMainMenu() });
             }
 
             deleteCache[chatId] = { games };
         } catch (e) {
             console.error(`[LOG] User ${userId} (${username}) encountered an error while loading delete menu: ${e.message}`);
-            return refreshDashboard(ctx, '❌ Ошибка загрузки.', { ...getMainMenu() });
+            return smartEdit(ctx, '❌ Ошибка загрузки.', { ...getMainMenu() });
         }
     }
 

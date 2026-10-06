@@ -24,7 +24,7 @@ module.exports = (bot, userStates) => {
         if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
         userStates[chatId]._lastActivity[userId] = Date.now();
 
-        refreshDashboard(ctx, '🎮 <b>Добавление игры</b>\nОтправьте ссылку на игру в Steam <b>ИЛИ</b> просто её название.', { parse_mode: 'HTML', ...getCancelMenu() });
+        smartEdit(ctx, '🎮 <b>Добавление игры</b>\nОтправьте ссылку на игру в Steam <b>ИЛИ</b> просто её название.', { parse_mode: 'HTML', ...getCancelMenu() });
     });
 
     // Обработка текста (только когда пользователь в состоянии)

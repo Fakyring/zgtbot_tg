@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { refreshDashboard, cleanMsg } = require('../utils/helpers');
+const { refreshDashboard, smartEdit, cleanMsg } = require('../utils/helpers');
 const { getSettingsMenu, getCancelMenu, getMainMenu } = require('../keyboards');
 const { getChatSettings, updateChatSettings } = require('../utils/db');
 const { fetchGameData } = require('../services/sheets');
@@ -10,7 +10,7 @@ module.exports = (bot, userStates) => {
         const chatId = ctx.chat.id;
         const userId = ctx.from.id;
         if (userStates[chatId]) delete userStates[chatId][userId];
-        refreshDashboard(ctx, '⚙️ <b>Настройки</b>', { parse_mode: 'HTML', ...getSettingsMenu() });
+        smartEdit(ctx, '⚙️ <b>Настройки</b>', { parse_mode: 'HTML', ...getSettingsMenu() });
     });
 
     bot.action('set_link_table', (ctx) => {
@@ -20,7 +20,7 @@ module.exports = (bot, userStates) => {
         userStates[chatId][userId] = 'WAITING_FOR_SCRIPT_URL';
         if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
         userStates[chatId]._lastActivity[userId] = Date.now();
-        refreshDashboard(ctx, '🔗 <b>Привязка</b>\nОтправьте ссылку на Google Apps Script (Web App URL).', { parse_mode: 'HTML', ...getCancelMenu() });
+        smartEdit(ctx, '🔗 <b>Привязка</b>\nОтправьте ссылку на Google Apps Script (Web App URL).', { parse_mode: 'HTML', ...getCancelMenu() });
     });
 
     bot.action('set_add_user', (ctx) => {
@@ -30,7 +30,7 @@ module.exports = (bot, userStates) => {
         userStates[chatId][userId] = 'WAITING_FOR_USER_DATA';
         if (!userStates[chatId]._lastActivity) userStates[chatId]._lastActivity = {};
         userStates[chatId]._lastActivity[userId] = Date.now();
-        refreshDashboard(ctx, '👤 <b>Добавить друга</b>\nОтправьте: SteamID64 Имя', { parse_mode: 'HTML', ...getCancelMenu() });
+        smartEdit(ctx, '👤 <b>Добавить друга</b>\nОтправьте: SteamID64 Имя', { parse_mode: 'HTML', ...getCancelMenu() });
     });
 
     // --- ИСПРАВЛЕННОЕ ОБНОВЛЕНИЕ ЦЕН ---
@@ -39,7 +39,7 @@ module.exports = (bot, userStates) => {
         if (!settings?.scriptUrl) return ctx.answerCbQuery('❌ Таблица не привязана');
 
         await ctx.answerCbQuery('Запускаю обновление...');
-        await refreshDashboard(ctx, '🔄 <b>Обновление цен...</b>\nСчитываю список игр...', { parse_mode: 'HTML' });
+        await smartEdit(ctx, '🔄 <b>Обновление цен...</b>\nСчитываю список игр...', { parse_mode: 'HTML' });
 
         try {
             // 1. Сбрасываем кэш, чтобы получить актуальный список игр
@@ -48,7 +48,7 @@ module.exports = (bot, userStates) => {
             const updates = [];
 
             if (games.length === 0) {
-                return refreshDashboard(ctx, '📭 В таблице нет игр.', { ...getMainMenu() });
+                return smartEdit(ctx, '📭 В таблице нет игр.', { ...getMainMenu() });
             }
 
             let count = 0;
@@ -58,10 +58,8 @@ module.exports = (bot, userStates) => {
                 // Каждые 5 игр обновляем статус, чтобы пользователь видел прогресс
                 if (count % 5 === 0) {
                     try {
-                        await ctx.telegram.editMessageText(
-                            ctx.chat.id,
-                            settings.lastMessageId,
-                            null,
+                        await smartEdit(
+                            ctx,
                             `🔄 Обработано: ${count}/${games.length}`
                         );
                     } catch (e) {}
@@ -98,16 +96,16 @@ module.exports = (bot, userStates) => {
                 }
             }
 
-            await refreshDashboard(ctx, '💾 <b>Сохраняю новые цены в таблицу...</b>', { parse_mode: 'HTML' });
+            await smartEdit(ctx, '💾 <b>Сохраняю новые цены в таблицу...</b>', { parse_mode: 'HTML' });
 
             // 3. Отправляем данные
             await axios.post(settings.scriptUrl, { action: 'update_price_batch', updates });
 
-            await refreshDashboard(ctx, `✅ <b>Готово!</b>\nОбновлено игр: ${updates.length}`, { parse_mode: 'HTML', ...getMainMenu() });
+            await smartEdit(ctx, `✅ <b>Готово!</b>\nОбновлено игр: ${updates.length}`, { parse_mode: 'HTML', ...getMainMenu() });
 
         } catch (e) {
             console.error(e);
-            await refreshDashboard(ctx, '❌ Ошибка при обновлении.\nВозможно, таблица недоступна.', { ...getMainMenu() });
+            await smartEdit(ctx, '❌ Ошибка при обновлении.\nВозможно, таблица недоступна.', { ...getMainMenu() });
         }
     });
 

@@ -31,7 +31,7 @@ module.exports = (bot, userStates) => {
             console.log(`[LOG] User ${userId} (${username}) returned to the main menu.`);
         }
 
-        refreshDashboard(ctx, '🏠 <b>Главное меню</b>', { parse_mode: 'HTML', ...getMainMenu() });
+        smartEdit(ctx, '🏠 <b>Главное меню</b>', { parse_mode: 'HTML', ...getMainMenu() });
     });
 
     bot.action('denis_answer', async (ctx) => {
@@ -68,7 +68,7 @@ module.exports = (bot, userStates) => {
             console.log(`[LOG] User ${userId} (${username}) canceled the action.`);
         }
 
-        refreshDashboard(ctx, '🚫 Действие отменено.', { parse_mode: 'HTML', ...getMainMenu() });
+        smartEdit(ctx, '🚫 Действие отменено.', { parse_mode: 'HTML', ...getMainMenu() });
     });
 
     // Middleware для авто-сброса состояний (таймер 5 минут)
