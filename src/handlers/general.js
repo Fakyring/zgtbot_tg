@@ -35,10 +35,19 @@ module.exports = (bot, userStates) => {
     bot.action('denis_answer', async (ctx) => {
         const userId = ctx.from.id;
         const username = ctx.from.first_name || ctx.from.username || 'Unknown';
+        const roll = Math.random();
+        const suffixes = ['0', 'o', 'X', 'x', '___-'];
+        let answer = 'Без комментариев';
 
-        await ctx.reply('Без комментариев');
+        if (roll >= 0.9) {
+            answer = `-__${suffixes[Math.floor(Math.random() * suffixes.length)]}`;
+        } else if (roll >= 0.7) {
+            answer = '-_-';
+        }
+
+        await ctx.reply(answer);
         await ctx.answerCbQuery();
-        console.log(`[LOG] User ${userId} (${username}) received a default answer to the 'denis_answer' action.`);
+        console.log(`[LOG] User ${userId} (${username}) received '${answer}' from the 'denis_answer' action.`);
     });
 
     bot.action('action_close', async (ctx) => {
