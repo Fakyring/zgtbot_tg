@@ -40,93 +40,102 @@ async function deleteOldDashboard(ctx) {
     }
 }
 
+function isGroupChat(ctx) {
+    return ctx.chat?.type === 'group' || ctx.chat?.type === 'supergroup';
+}
+
+function getEphemeralParams(ctx) {
+    const userId = ctx.from?.id;
+    const callbackQueryId = ctx.callbackQuery?.id;
+    if (!userId) return null;
+
+    return {
+        receiver_user_id: userId,
+        ...(callbackQueryId ? { callback_query_id: callbackQueryId, replace_callback_query_message: true } : {})
+    };
+}
+
+function saveDashboardMessage(ctx, msg) {
+    const messageId = msg?.message_id || msg?.ephemeral_message_id;
+    const userId = ctx.from?.id;
+    if (!messageId || !ctx.chat?.id) return;
+
+    const db = loadSettings();
+    if (!db[ctx.chat.id]) db[ctx.chat.id] = {};
+    db[ctx.chat.id].lastMessageId = messageId;
+    if (userId) {
+        if (!db[ctx.chat.id].userDashboards) db[ctx.chat.id].userDashboards = {};
+        db[ctx.chat.id].userDashboards[userId] = messageId;
+    }
+    saveSettings(db);
+}
+
+async function sendEphemeralMessage(ctx, text, extra = {}) {
+    const userId = ctx.from?.id;
+    const params = getEphemeralParams(ctx);
+    if (!params) return null;
+
+    try {
+        const msg = await ctx.telegram.callApi('sendMessage', {
+            chat_id: ctx.chat.id,
+            text,
+            ephemeral_message_parameters: params,
+            ...extra
+        });
+        saveDashboardMessage(ctx, msg);
+        return msg;
+    } catch (err1) {
+        console.log(`[EPHEMERAL 10.3] Failed: ${err1.message}`);
+    }
+
+    try {
+        const msg = await ctx.telegram.callApi('sendMessage', {
+            chat_id: ctx.chat.id,
+            text,
+            receiver_user_id: userId,
+            ...(ctx.callbackQuery?.id ? { callback_query_id: ctx.callbackQuery.id } : {}),
+            ...extra
+        });
+        saveDashboardMessage(ctx, msg);
+        return msg;
+    } catch (err2) {
+        console.log(`[EPHEMERAL 10.2] Failed: ${err2.message}`);
+    }
+
+    if (ctx.callbackQuery?.id) {
+        try {
+            await ctx.answerCbQuery('Не удалось отправить приватное сообщение. Проверьте права бота.', { show_alert: true });
+        } catch (e) {}
+    }
+
+    return null;
+}
+
 async function refreshDashboard(ctx, text, extra = {}) {
     await deleteOldDashboard(ctx);
 
-    const isGroup = ctx.chat?.type === 'group' || ctx.chat?.type === 'supergroup';
-    const userId = ctx.from?.id;
-    const callbackQueryId = ctx.callbackQuery?.id;
-
-    let msg = null;
-
-    // В группах отправляем с параметрами приватности (Bot API 10.2 / 10.3)
-    if (isGroup && userId) {
-        // Попытка 1: Bot API 10.3 (EphemeralMessageParameters)
-        try {
-            const ephemeralParams = {
-                receiver_user_id: userId,
-                ...(callbackQueryId ? { callback_query_id: callbackQueryId, replace_callback_query_message: true } : {})
-            };
-            msg = await ctx.telegram.callApi('sendMessage', {
-                chat_id: ctx.chat.id,
-                text,
-                ephemeral_message_parameters: ephemeralParams,
-                ...extra
-            });
-        } catch (err1) {
-            console.log(`[EPHEMERAL 10.3] Failed: ${err1.message}`);
-        }
-
-        // Попытка 2: Bot API 10.2 (receiver_user_id + callback_query_id напрямую)
-        if (!msg) {
-            try {
-                msg = await ctx.telegram.callApi('sendMessage', {
-                    chat_id: ctx.chat.id,
-                    text,
-                    receiver_user_id: userId,
-                    ...(callbackQueryId ? { callback_query_id: callbackQueryId } : {}),
-                    ...extra
-                });
-            } catch (err2) {
-                console.log(`[EPHEMERAL 10.2] Failed: ${err2.message}`);
-            }
-        }
+    if (isGroupChat(ctx)) {
+        return sendEphemeralMessage(ctx, text, extra);
     }
 
-    // Fallback: обычная отправка (если личка или если эфемерный API недоступен)
-    if (!msg) {
-        msg = await ctx.reply(text, extra);
-    }
-
-    const messageId = msg?.message_id || msg?.ephemeral_message_id;
-    if (messageId && ctx.chat?.id) {
-        const db = loadSettings();
-        if (!db[ctx.chat.id]) db[ctx.chat.id] = {};
-        db[ctx.chat.id].lastMessageId = messageId;
-        if (userId) {
-            if (!db[ctx.chat.id].userDashboards) db[ctx.chat.id].userDashboards = {};
-            db[ctx.chat.id].userDashboards[userId] = messageId;
-        }
-        saveSettings(db);
-    }
+    const msg = await ctx.reply(text, extra);
+    saveDashboardMessage(ctx, msg);
 
     return msg;
 }
 
 async function smartEdit(ctx, text, extra = {}) {
-    const isGroup = ctx.chat?.type === 'group' || ctx.chat?.type === 'supergroup';
-    const userId = ctx.from?.id;
-
-    if (isGroup && userId) {
-        // Попытка editEphemeralMessageText (Bot API 10.2 / 10.3)
-        try {
-            const messageId = ctx.callbackQuery?.message?.message_id;
-            return await ctx.telegram.callApi('editEphemeralMessageText', {
-                chat_id: ctx.chat.id,
-                receiver_user_id: userId,
-                ephemeral_message_id: messageId,
-                text,
-                ...extra
-            });
-        } catch (e) {
-            // Игнорируем и переходим к стандартному редактированию
-        }
+    if (isGroupChat(ctx)) {
+        // В группе нельзя падать на обычный editMessageText: он меняет публичное сообщение для всех.
+        return sendEphemeralMessage(ctx, text, extra);
     }
 
     try {
-        await ctx.editMessageText(text, extra);
+        const msg = await ctx.editMessageText(text, extra);
+        saveDashboardMessage(ctx, msg);
+        return msg;
     } catch (e) {
-        await refreshDashboard(ctx, text, extra);
+        return refreshDashboard(ctx, text, extra);
     }
 }
 

@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { refreshDashboard, cleanMsg } = require('../utils/helpers');
+const { refreshDashboard, cleanMsg, smartEdit } = require('../utils/helpers');
 const { getMainMenu, getCancelMenu } = require('../keyboards');
 const { getChatSettings } = require('../utils/db');
 const { getSteamGameInfo, getUserLibrary, searchSteamGame } = require('../services/steam');
@@ -48,9 +48,11 @@ module.exports = (bot, userStates) => {
         if (state === 'WAITING_FOR_GAME_LINK') {
             await cleanMsg(ctx);
             let loadingMsg = null;
-            try {
-                loadingMsg = await ctx.reply('⏳ Ищу игру...');
-            } catch (e) {}
+            if (ctx.chat.type !== 'group' && ctx.chat.type !== 'supergroup') {
+                try {
+                    loadingMsg = await ctx.reply('⏳ Ищу игру...');
+                } catch (e) {}
+            }
 
             let game = null;
             if (text.includes('store.steampowered.com/app/')) {
